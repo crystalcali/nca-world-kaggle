@@ -42,3 +42,24 @@ The agent polls GitHub for up to 10 minutes, executes **one** approved job, publ
 - A token scoped to this one repository limits damage if credentials are compromised. Revoke it when no longer needed.
 - **Currently this repository is public.** Change it to private if you do not want source code or results to be visible to others.
 - Colab/Kaggle GPU sessions are time-limited. This is not an always-on autonomous service.
+
+
+## Experiment v1: synthetic GUI intervention
+
+The checked-in `train_v1.py` implements three models with identical random-data generation, loss definition and held-out evaluation seeds:
+
+| Model | Dynamic mechanism |
+|---|---|
+| `local` | NCA, click signal only at the control panel |
+| `world` | NCA + latent encoder/GRU conditioned by actions + EMA JEPA-like latent prediction |
+| `world_tiles` | As above, with nonlocal tile self-attention |
+
+Input: two observed frames, one stepwise action signal. Targets: future video frames, including remote effects of toggling a control on the opposite side of the interface.
+
+Metrics: overall frame MAE, panel MAE, foreground MAE, object position error, intervention-only object position error; short and long open-loop horizons.
+
+**These models are not parameter-matched** (local approx 8k; others approx 44-47k). The pilot uses only 30 training iterations per model to validate end-to-end execution; do not interpret it as evidence that one architecture is better. Longer runs with more seeds and capacity-matched controls are required.
+
+**To run:** after creating a new issue with exact title prefix `[COLAB-JOB]` and JSON body `{"task":"nca_pilot"}`, rerun the Kaggle notebook cell. The agent runs a fixed allowlisted training script and posts a JSON metrics report to that issue. Checkpoints and full loss history remain in the Kaggle filesystem under `/kaggle/working/nca_world/pilot_output`. The agent executes one job per notebook run.
+
+Security: do not give the GitHub token `Contents: write` permission or post it in a notebook cell/chat. GitHub Issues do **not** grant arbitrary code execution; only the two fixed job names are handled.
