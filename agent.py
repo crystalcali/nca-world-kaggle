@@ -119,8 +119,46 @@ def experiment_pilot() -> dict:
     return final
 
 
+def experiment_v2(pilot: bool) -> dict:
+    # Fixed repository path and fixed arguments, not user-provided commands.
+    raw = github("GET", "/contents/train_v2.py")
+    content = base64.b64decode(raw["content"])
+    folder = Path("/kaggle/working/nca_world")
+    folder.mkdir(parents=True, exist_ok=True)
+    script = folder / "train_v2.py"
+    script.write_bytes(content)
+    output = folder / ("v2_pilot" if pilot else "v2_train")
+    command = [sys.executable, "-u", str(script), "--out", str(output)]
+    if pilot:
+        command += ["--pilot"]
+    env = os.environ.copy()
+    env.pop("GITHUB_TOKEN", None)
+    print("Running fixed NCA v2", "pilot" if pilot else "training", flush=True)
+    process = subprocess.Popen(command, cwd=str(folder), env=env,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               text=True, bufsize=1)
+    final = None
+    last_lines = []
+    for line in process.stdout:
+        line = line.rstrip()
+        print(line, flush=True)
+        last_lines.append(line)
+        last_lines = last_lines[-30:]
+        if line.startswith("FINAL_RESULTS_JSON="):
+            final = json.loads(line.partition("=")[2])
+    status = process.wait()
+    if status != 0:
+        raise RuntimeError("V2 run failed with exit code " + str(status) +
+                           ". Last output: " + "\n".join(last_lines)[-2000:])
+    if final is None:
+        raise RuntimeError("V2 run ended without FINAL_RESULTS_JSON")
+    return final
+
+
 # Fixed, audited task names. No arbitrary code from GitHub issues.
-ALLOWED_TASKS = {"gpu_smoke": smoke_test, "nca_pilot": experiment_pilot}
+ALLOWED_TASKS = {"gpu_smoke": smoke_test, "nca_pilot": experiment_pilot,
+                 "nca_v2_pilot": lambda: experiment_v2(True),
+                 "nca_v2_train": lambda: experiment_v2(False)}
 
 
 def is_processed(issue_number: int) -> bool:
