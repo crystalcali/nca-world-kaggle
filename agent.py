@@ -7,6 +7,9 @@ are accepted. Credentials are read from Kaggle Secrets, never committed.
 from __future__ import annotations
 
 import json
+import base64
+import subprocess
+from pathlib import Path
 import os
 import platform
 import sys
@@ -81,8 +84,43 @@ def smoke_test() -> dict:
     return report
 
 
-# No shell, subprocess, eval, exec or user-supplied Python here.
-ALLOWED_TASKS = {"gpu_smoke": smoke_test}
+def experiment_pilot() -> dict:
+    # Only this checked-in source and fixed arguments are allowed.
+    # Issues do not contain executable instructions.
+    raw = github("GET", "/contents/train_v1.py")
+    content = base64.b64decode(raw["content"])
+    folder = Path("/kaggle/working/nca_world")
+    folder.mkdir(parents=True, exist_ok=True)
+    script = folder / "train_v1.py"
+    script.write_bytes(content)
+    command = [sys.executable, "-u", str(script), "--pilot",
+               "--out", str(folder / "pilot_output")]
+    env = os.environ.copy()
+    env.pop("GITHUB_TOKEN", None)
+    print("Starting allowlisted pilot", flush=True)
+    process = subprocess.Popen(command, cwd=str(folder), env=env,
+                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               text=True, bufsize=1)
+    final = None
+    last_lines = []
+    for line in process.stdout:
+        line = line.rstrip()
+        print(line, flush=True)
+        last_lines.append(line)
+        last_lines = last_lines[-20:]
+        if line.startswith("FINAL_RESULTS_JSON="):
+            final = json.loads(line.partition("=")[2])
+    status = process.wait()
+    if status != 0:
+        raise RuntimeError("Experiment failed with exit code " + str(status) +
+                           ". Last output: " + "\\n".join(last_lines)[-1600:])
+    if final is None:
+        raise RuntimeError("Experiment ended without FINAL_RESULTS_JSON")
+    return final
+
+
+# Fixed, audited task names. No arbitrary code from GitHub issues.
+ALLOWED_TASKS = {"gpu_smoke": smoke_test, "nca_pilot": experiment_pilot}
 
 
 def is_processed(issue_number: int) -> bool:
