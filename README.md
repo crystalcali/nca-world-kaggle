@@ -77,3 +77,11 @@ Additional metrics:
 V2 pilot: 60 training iterations per model. V2 full run: 900 iterations per model. The model sizes are not matched. No claims of better generalization until longer runs and matched-capacity baselines.
 
 Allowed GitHub issue bodies: {"task":"nca_v2_pilot"} or {"task":"nca_v2_train"}. The unchanged Kaggle notebook launcher processes one new task per run. Outputs and checkpoints stay in /kaggle/working/nca_world/v2_pilot or v2_train.
+
+## Experiment v3 — anti-copying training
+
+The v2 pilot found an almost frozen-frame solution. V3 preserves the same visual task and counterfactual testing, but adds supervised foreground segmentation and differentiable ball-position loss. Both losses use ground-truth object masks available from our synthetic simulator.
+
+All models receive identical seeded training episodes; v2 did not fully control this. This is a more informative architecture test, not a claim of learned physics. JEPA is a small EMA latent predictor, not a pretrained universal JEPA.
+
+V3 pilot: 160 steps per model and 14-frame long-horizon test. Full train: 1100 steps/model. Still not capacity matched. Agent accepted tasks: {"task":"nca_v3_pilot"}, {"task":"nca_v3_train"}. Run the original Kaggle launcher again to pick the next pending issue. Checkpoints are stored in /kaggle/working/nca_world/v3_pilot or v3_train.
