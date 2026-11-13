@@ -63,3 +63,17 @@ Metrics: overall frame MAE, panel MAE, foreground MAE, object position error, in
 **To run:** after creating a new issue with exact title prefix `[COLAB-JOB]` and JSON body `{"task":"nca_pilot"}`, rerun the Kaggle notebook cell. The agent runs a fixed allowlisted training script and posts a JSON metrics report to that issue. Checkpoints and full loss history remain in the Kaggle filesystem under `/kaggle/working/nca_world/pilot_output`. The agent executes one job per notebook run.
 
 Security: do not give the GitHub token `Contents: write` permission or post it in a notebook cell/chat. GitHub Issues do **not** grant arbitrary code execution; only the two fixed job names are handled.
+
+
+## Experiment v2: distinguish dynamics from copying
+
+train_v2.py strengthens the synthetic benchmark. Every episode has at most one distant button event, which reverses an object's motion. Evaluation compares paired futures with identical first frames but different future actions.
+
+Additional metrics:
+- copy_last_position_error_px — baseline that freezes the last observed object position.
+- predicted_counterfactual_separation_px — model's response to a button action.
+- true_counterfactual_separation_px — difference between ground-truth futures.
+
+V2 pilot: 60 training iterations per model. V2 full run: 900 iterations per model. The model sizes are not matched. No claims of better generalization until longer runs and matched-capacity baselines.
+
+Allowed GitHub issue bodies: {"task":"nca_v2_pilot"} or {"task":"nca_v2_train"}. The unchanged Kaggle notebook launcher processes one new task per run. Outputs and checkpoints stay in /kaggle/working/nca_world/v2_pilot or v2_train.
