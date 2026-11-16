@@ -303,7 +303,7 @@ def train_one(agent: Agent, config: Config, variant: str, seed: int, device,
                 sh = evals[-1]["score"]
                 print(f"{variant:>18} seed={seed} update={upd+1:3d}/{config.updates} "
                       f"train-score={stats['score']:.3f} eval={s:.3f} shifted={sh:.3f} "
-                      f"entropy={float(ent):.2f}", flush=True)
+                      f"entropy={float(ent.detach()):.2f}", flush=True)
     return agent, hist, evals
 
 
@@ -391,7 +391,7 @@ def plot_results(history, evaluation, final, models, config: Config):
         plt.fill_between(x, y - sd, y + sd, alpha=.12)
     plt.xlabel("Training update")
     plt.ylabel("Held-out shifted-layout score ↑")
-    plt.title("Out-of-distribution adaptation (same eval seeds)")
+    plt.title("Out-of-distribution generalization (same eval seeds)")
     plt.legend(fontsize=8)
     plt.grid(alpha=.25)
     plt.tight_layout()
